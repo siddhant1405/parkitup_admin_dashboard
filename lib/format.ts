@@ -1,6 +1,6 @@
 import type {
   CameraCoverage,
-  EntryExitConfig,
+  EntryExitConfiguration,
   InternetQuality,
   LightingLevel,
   ParkingSurface,
@@ -25,9 +25,9 @@ export const PARKING_TYPE_LABELS: Record<ParkingType, string> = {
   other: "Other",
 };
 
-const ENTRY_EXIT_LABELS: Record<EntryExitConfig, string> = {
-  "same-gate": "Same gate",
-  "separate-gates": "Separate gates",
+const ENTRY_EXIT_LABELS: Record<EntryExitConfiguration, string> = {
+  same: "Same gate",
+  separate: "Separate gates",
 };
 
 const SURFACE_LABELS: Record<ParkingSurface, string> = {
@@ -49,7 +49,7 @@ const INTERNET_LABELS: Record<InternetQuality, string> = {
 };
 
 const POS_DEVICE_LABELS: Record<PosDevice, string> = {
-  cash: "Cash",
+  manual: "Manual / cash",
   "pos-machine": "POS machine",
   "mobile-app": "Mobile app",
 };
@@ -59,7 +59,7 @@ const PAYMENT_RECIPIENT_LABELS: Record<PaymentRecipientType, string> = {
   company: "Company",
 };
 
-export function formatEntryExit(config: EntryExitConfig): string {
+export function formatEntryExit(config: EntryExitConfiguration): string {
   return ENTRY_EXIT_LABELS[config];
 }
 

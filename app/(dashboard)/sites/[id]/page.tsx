@@ -79,13 +79,16 @@ export default function SiteDetailPage() {
             <DetailField label="Parking type" value={PARKING_TYPE_LABELS[pc.parkingType]} />
             <DetailField
               label="Entry / exit"
-              value={`${formatEntryExit(pc.entryExitConfig)} (${pc.numberOfGates} gate${pc.numberOfGates === 1 ? "" : "s"})`}
+              value={`${formatEntryExit(pc.entryExit.configuration)} (${pc.entryExit.entryGateCount} in / ${pc.entryExit.exitGateCount} out)`}
             />
             <DetailField label="Total slots" value={pc.totalSlots} />
             <DetailField label="Operating hours" value={`${pc.opensAt} - ${pc.closesAt}`} />
             <DetailField label="Peak periods" value={pc.peakPeriods} />
             <DetailField label="Surface" value={formatSurface(pc.surface)} />
-            {site.rwaPassSystem !== undefined && (
+            {/* RWA pass system only means anything for society sites — seed data only ever
+                sets it in that case, but the guard is explicit here since this is display
+                logic driven by a real backend eventually. */}
+            {pc.parkingType === "society" && site.rwaPassSystem !== undefined && (
               <DetailField label="RWA pass system" value={site.rwaPassSystem ? "Yes" : "No"} />
             )}
           </CardContent>
@@ -104,7 +107,8 @@ export default function SiteDetailPage() {
             <DetailField label="Signage" value={formatLevel(security.signage)} />
             <DetailField label="POS / payment device" value={formatPosDevices(security.posDevice)} />
             <DetailField label="Internet / network" value={formatInternetQuality(security.internetQuality)} />
-            <DetailField label="Vendor & pricing notes" value={security.vendorPricingNotes} />
+            <DetailField label="Vendor notes" value={security.vendorNotes} />
+            <DetailField label="Competitor notes" value={security.competitorNotes} />
             <DetailField label="Restrictions" value={security.restrictions} />
           </CardContent>
         </Card>
@@ -132,8 +136,8 @@ export default function SiteDetailPage() {
               value={formatPaymentRecipientType(paymentRecipient.type)}
             />
             <DetailField label="Registered name" value={paymentRecipient.registeredName} />
-            <DetailField label="GST No." value={gst.gstNumber} />
             <DetailField label="GST status" value={gst.registered ? "GST registered" : "Not GST registered"} />
+            <DetailField label="GST No." value={gst.gstNumber} />
           </CardContent>
         </Card>
 
@@ -179,6 +183,8 @@ export default function SiteDetailPage() {
             <DetailField label="Created" value={formatDate(site.createdAt)} />
             <DetailField label="Submitted" value={formatDate(site.submittedAt)} />
             <DetailField label="Activated" value={formatDate(site.activatedAt)} />
+            <DetailField label="Deactivated" value={formatDate(site.inactivatedAt)} />
+            {site.isDeleted && <DetailField label="Deleted" value={formatDate(site.deletedAt)} />}
           </CardContent>
         </Card>
       </div>

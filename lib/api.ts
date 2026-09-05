@@ -9,7 +9,11 @@ const STORAGE_KEY = "parkitup_admin_sites";
 // existing browsers (new fields, corrected data, etc). Without this, a browser that
 // seeded before the change keeps serving the stale cached data forever, since seeding
 // only happens when the key is absent.
-const SEED_VERSION = 3;
+const SEED_VERSION = 4;
+// Artificial delay so loading states (skeletons, disabled buttons) are actually
+// exercised during development instead of resolving instantly. A real fetch() to a
+// real backend won't need this — delay() can just be dropped once fetchSites /
+// fetchSiteById / updateSiteStatus call real endpoints instead.
 const SIMULATED_LATENCY_MS = 250;
 
 interface StoredData {
@@ -60,6 +64,10 @@ export async function fetchSiteById(id: string): Promise<SiteType | undefined> {
   return delay(readAll().find((site) => site.id === id));
 }
 
+// The only transitions a manager can make from this app: approve a submission
+// (submitted -> active), or toggle a live site off/back on (active <-> inactive).
+// 'draft' has no outgoing transitions here since drafts never reach this app at all
+// (see excludeDrafts above) — there's nothing for a manager to do with one.
 const VALID_TRANSITIONS: Record<SiteStatus, SiteStatus[]> = {
   draft: [],
   submitted: ["active"],
@@ -67,6 +75,10 @@ const VALID_TRANSITIONS: Record<SiteStatus, SiteStatus[]> = {
   inactive: ["active"],
 };
 
+// This app's only write action — everything else (fetchSites, fetchSiteById) is
+// read-only. There is no create/edit-site function here by design: sites are
+// authored entirely in the operator portal, and this app only approves/rejects and
+// toggles their live status.
 export async function updateSiteStatus(id: string, nextStatus: SiteStatus): Promise<SiteType> {
   const sites = readAll();
   const index = sites.findIndex((site) => site.id === id);
@@ -78,10 +90,15 @@ export async function updateSiteStatus(id: string, nextStatus: SiteStatus): Prom
   }
 
   const now = new Date().toISOString();
+  // activatedAt/inactivatedAt are stamped only the first time a site reaches that
+  // state, and never overwritten on a later transition back into it (so activatedAt
+  // still reflects the site's original activation date even after several
+  // active <-> inactive cycles).
   const updated: SiteType = {
     ...site,
     status: nextStatus,
     activatedAt: nextStatus === "active" && !site.activatedAt ? now : site.activatedAt,
+    inactivatedAt: nextStatus === "inactive" && !site.inactivatedAt ? now : site.inactivatedAt,
     updatedAt: now,
   };
   sites[index] = updated;

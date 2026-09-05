@@ -36,12 +36,21 @@ export interface OverviewKpis {
 }
 
 export function computeOverviewKpis(sites: Site[]): OverviewKpis {
-  // Composition scope: real inventory, pipeline included, drafts and deleted excluded.
+  // This function uses two different scopes deliberately, not inconsistently:
+  //   - compositionSites: the whole real inventory (submitted + active + inactive,
+  //     drafts and deleted excluded) — used for portfolio totals like site/operator
+  //     counts and capacity, where a submitted-but-not-yet-approved site still
+  //     represents real inventory worth counting.
+  //   - activeSites: only sites currently live and operating — used for every
+  //     "health" metric (security coverage, connectivity, risk, parking-type/location
+  //     composition). A submitted or inactive site's security setup isn't relevant to
+  //     "how healthy is the portfolio we're actually running today."
+  // Drafts never reach this app at all (see excludeDrafts in lib/api.ts) — the
+  // exclusion here is just defensive in case that invariant is ever violated upstream.
   const compositionSites = sites.filter(
     (s) => !s.isDeleted && (s.status === "submitted" || s.status === "active" || s.status === "inactive")
   );
 
-  // Portfolio-health scope: currently operating sites only.
   const activeSites = sites.filter((s) => s.status === "active" && !s.isDeleted);
 
   // Parking type distribution (active sites only)
@@ -74,6 +83,9 @@ export function computeOverviewKpis(sites: Site[]): OverviewKpis {
 
     if (site.riskFactors.length > 0) flaggedRiskCount += 1;
 
+    // "Digital payment adoption" counts a site as digital if it accepts card/UPI via
+    // either channel — a manual/cash-only site (posDevice: ["manual"]) doesn't count,
+    // even if it also happens to have a POS terminal listed for some other purpose.
     if (
       site.security.posDevice.includes("pos-machine") ||
       site.security.posDevice.includes("mobile-app")
@@ -97,6 +109,12 @@ export function computeOverviewKpis(sites: Site[]): OverviewKpis {
       ? 0
       : Math.round((totalCapacity / compositionSites.length) * 10) / 10;
 
+  // "Avg. ticket price per site" is a two-level average, deliberately: first average a
+  // site's own hourly pricing rules together (e.g. a site with separate weekday/weekend
+  // hourly rates), then average those per-site figures across sites. This keeps a site
+  // with many pricing rules from outweighing a site with only one in the portfolio-wide
+  // number — a flat average over every individual rule would skew toward whichever sites
+  // happen to have the most rules, not whichever sites actually charge more.
   const perSiteHourlyAverages: number[] = [];
   for (const site of compositionSites) {
     const hourlyRules = site.pricing.filter((rule) => rule.billingType === "hourly");
@@ -160,6 +178,11 @@ export function computeWeeklyActivations(sites: Site[], weeks = 8): WeeklyActiva
     return { weekStart: weekStart.toISOString(), count: 0 };
   });
 
+  // Bucketed by activatedAt regardless of current status or isDeleted — this chart is
+  // "how many sites did we bring live each week," a historical fact that doesn't
+  // change if the site was later deactivated or deleted. activatedAt is only ever
+  // present on sites that reached 'active' at some point (see lib/api.ts), so no
+  // extra status filtering is needed here.
   for (const site of sites) {
     if (!site.activatedAt) continue;
     const activatedWeekStart = startOfWeek(new Date(site.activatedAt)).getTime();

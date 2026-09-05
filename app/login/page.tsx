@@ -104,6 +104,7 @@ export default function LoginPage() {
               )}
             </div>
 
+            {/* Inert: no real session-length concept exists yet for this to control. */}
             <div className="flex items-center gap-2">
               <Checkbox id="rememberMe" />
               <Label htmlFor="rememberMe" className="font-normal text-muted-foreground">

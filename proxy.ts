@@ -1,6 +1,10 @@
-// Next.js 16 route-guard convention (replaces middleware.ts). Placeholder
-// auth gate: no real credential check yet, just a session cookie set by the
-// login page's "Continue" action.
+// Next.js 16 route-guard convention (replaces middleware.ts). Placeholder auth gate:
+// this only checks that SESSION_COOKIE is *present*, not that it holds any particular
+// value or that the login form's input was ever checked against a real account — see
+// setSessionCookie in lib/auth.ts, which sets it unconditionally on any validly
+// formatted submission. Swap this file's presence check for real session verification
+// (e.g. a signed JWT, or a call to the real backend) once one exists; the redirect
+// logic and PUBLIC_PATHS handling below stay the same either way.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 

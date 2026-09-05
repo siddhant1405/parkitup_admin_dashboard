@@ -56,20 +56,32 @@ function buildSite(index: number): Site {
 
   const createdAt = daysAgo(90 - index * 3);
   const submittedAt = daysAgo(80 - index * 3);
+  // Stamped once, the first time a site becomes active/inactive — see the matching
+  // comment on Site.activatedAt/inactivatedAt in lib/types.ts. Both can be set on the
+  // same site (activatedAt persists through a later deactivation).
   const activatedAt =
     status === "active" || status === "inactive" ? daysAgo(70 - index * 2) : undefined;
+  const inactivatedAt = status === "inactive" ? daysAgo(60 - index * 2) : undefined;
+  const isDeleted = index === 12;
+  const deletedAt = isDeleted ? daysAgo(10) : undefined;
 
   const hasFullSecurity = index % 3 !== 0;
   const hasRisk = index % 5 === 0;
 
   const posDevices: Site["security"]["posDevice"] =
     index % 4 === 0
-      ? ["cash"]
+      ? ["manual"]
       : index % 4 === 1
-        ? ["cash", "pos-machine"]
+        ? ["manual", "pos-machine"]
         : index % 4 === 2
           ? ["pos-machine", "mobile-app"]
           : ["mobile-app"];
+
+  // Same-gate sites must have matching entry/exit counts (mirrors the operator portal's
+  // intake validation); separate-gate sites can differ.
+  const sameGate = index % 2 === 0;
+  const entryGateCount = (index % 3) + 1;
+  const exitGateCount = sameGate ? entryGateCount : ((index + 1) % 3) + 1;
 
   return {
     id: `site-${index + 1}`,
@@ -83,8 +95,11 @@ function buildSite(index: number): Site {
     operatorName: operator.name,
     parkingConfiguration: {
       parkingType,
-      entryExitConfig: index % 2 === 0 ? "same-gate" : "separate-gates",
-      numberOfGates: (index % 3) + 1,
+      entryExit: {
+        configuration: sameGate ? "same" : "separate",
+        entryGateCount,
+        exitGateCount,
+      },
       totalSlots: 50 + index * 15,
       opensAt: "06:00",
       closesAt: index % 2 === 0 ? "22:00" : "23:59",
@@ -99,7 +114,8 @@ function buildSite(index: number): Site {
       lighting: hasFullSecurity ? "full" : "partial",
       signage: hasFullSecurity ? "full" : "partial",
       posDevice: posDevices,
-      vendorPricingNotes: index % 2 === 0 ? "unigate" : undefined,
+      vendorNotes: index % 2 === 0 ? "Uses Unigate for barrier hardware." : undefined,
+      competitorNotes: index % 5 === 1 ? "Nearby lot run by ParkWise, similar pricing." : undefined,
       internetQuality: index % 6 === 0 ? "poor" : index % 6 === 1 ? "none" : "good",
       restrictions: index % 5 === 0 ? "Height limit 2.1m" : undefined,
     },
@@ -129,10 +145,12 @@ function buildSite(index: number): Site {
             ],
     riskFactors: hasRisk ? ["Frequent complaints about lighting"] : [],
     rwaPassSystem: parkingType === "society" ? index % 2 === 0 : undefined,
-    isDeleted: index === 12,
+    isDeleted,
     createdAt,
     submittedAt,
     activatedAt,
+    inactivatedAt,
+    deletedAt,
     updatedAt: daysAgo(Math.max(0, 5 - index)),
   };
 }
